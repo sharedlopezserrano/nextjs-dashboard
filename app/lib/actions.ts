@@ -9,7 +9,6 @@ import { AuthError } from 'next-auth';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
-// 🔹 Schema
 const FormSchema = z.object({
   id: z.string(),
   customerId: z.string().min(1, {
@@ -27,7 +26,6 @@ const FormSchema = z.object({
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
-// 🔹 State type
 export type State = {
   errors?: {
     customerId?: string[];
@@ -37,7 +35,6 @@ export type State = {
   message?: string | null;
 };
 
-// 🔹 CREATE
 export async function createInvoice(prevState: State, formData: FormData) {
   const validatedFields = CreateInvoice.safeParse({
     customerId: formData.get('customerId'),
@@ -71,7 +68,6 @@ export async function createInvoice(prevState: State, formData: FormData) {
   redirect('/dashboard/invoices');
 }
 
-// 🔹 UPDATE
 export async function updateInvoice(
   id: string,
   prevState: State,
@@ -111,17 +107,15 @@ export async function updateInvoice(
   redirect('/dashboard/invoices');
 }
 
-// 🔹 DELETE
 export async function deleteInvoice(id: string) {
   try {
     await sql`DELETE FROM invoices WHERE id = ${id}`;
   } catch (error) {
-    return {
-      message: 'Database Error: Failed to Delete Invoice.',
-    };
+    console.error('Database Error: Failed to Delete Invoice.', error);
   }
 
   revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
 }
 
 export async function authenticate(
@@ -132,7 +126,9 @@ export async function authenticate(
     await signIn('credentials', formData);
   } catch (error) {
     if (error instanceof AuthError) {
-      switch (error.type) {
+      const e = error as AuthError;
+
+      switch (e.type) {
         case 'CredentialsSignin':
           return 'Invalid credentials.';
         default:
